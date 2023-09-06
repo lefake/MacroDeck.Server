@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Homemade StreamDeck HomePage</title>
+    </head>
+
+    <body>
+         <div class="grid-container">
+          <div class="grid-item">
+              <div class="margin">
+                  Mic
+              </div>
+              <div >
+                  10 dB
+              </div>
+              <div>
+                  <input id="s0" orient="vertical" type="range" min="-60" max="10" value="0" class="slider" />
+              </div>
+              <div>
+                  -60 dB
+              </div>
+          </div>
+          <div class="grid-item">
+              <div class="margin">
+                  Music
+              </div>
+              <div>
+                  10 dB
+              </div>
+              <div>
+                <input id="s1" orient="vertical" type="range" min="-60" max="10" value="0" class="slider" />
+              </div>
+              <div>
+                  -60 dB
+              </div>
+          </div>
+          <div class="grid-item">
+              <div class="margin">
+                  Discord
+              </div>
+              <div>
+                  10 dB
+              </div>
+              <div>
+                <input id="s2" orient="vertical" type="range" min="-60" max="10" value="0" class="slider" />
+              </div>
+              <div>
+                  -60 dB
+              </div>
+          </div>
+          <div class="grid-item">
+              <div class="margin">
+                  Firefox
+              </div>
+              <div>
+                  10 dB
+              </div>
+              <div>
+                <input id="s3" orient="vertical" type="range" min="-60" max="10" value="0" class="slider" />
+              </div>
+              <div>
+                  -60 dB
+              </div>
+          </div>
+          <div class="grid-item">
+              <div class="margin">
+                  Input 5
+              </div>
+              <div>
+                  10 dB
+              </div>
+              <div>
+                <input id="s4" orient="vertical" type="range" min="-60" max="10" value="0" class="slider" />
+              </div>
+              <div>
+                  -60 dB
+              </div>
+          </div>
+          <div class="grid-item">
+              <div class="margin">
+                  Games
+              </div>
+              <div>
+                  10 dB
+              </div>
+              <div>
+                <input id="s5" orient="vertical" type="range" min="-60" max="10" value="0" class="slider" />
+              </div>
+              <div>
+                  -60 dB
+              </div>
+          </div>
+          <div class="grid-item">
+              <div class="margin">
+                  VInput 2
+              </div>
+              <div>
+                  10 dB
+              </div>
+              <div>
+                <input id="s6" orient="vertical" type="range" min="-60" max="10" value="0" class="slider" />
+              </div>
+              <div>
+                  -60 dB
+              </div>
+          </div>
+          <div class="grid-item">
+              <div class="margin">
+                  General
+              </div>
+              <div>
+                  10 dB
+              </div>
+              <div>
+                  <input id="s7" orient="vertical" type="range" min="-60" max="10" value="0" class="slider" />
+              </div>
+              <div>
+                  -60 dB
+              </div>
+          </div>
+          <div class="grid-item">
+              <button id="m0" class="button">Mute</button>
+          </div>
+          <div class="grid-item">
+              <button id="m1" class="button">Mute</button>
+          </div>
+          <div class="grid-item">
+              <button id="m2" class="button">Mute</button>
+          </div>
+          <div class="grid-item">
+              <button id="m3" class="button">Mute</button>
+          </div>
+          <div class="grid-item">
+              <button id="m4" class="button">Mute</button>
+          </div>
+          <div class="grid-item">
+              <button id="m5" class="button">Mute</button>
+          </div>
+          <div class="grid-item">
+              <button id="m6" class="button">Mute</button>
+          </div>
+          <div class="grid-item">
+              <button id="m7" class="button">Mute</button>
+          </div>
+        </div>
+    </body>
+
+    <script>
+        let red = "rgb(255, 0, 0)"
+        let gray = "rgb(128,128,128)"
+
+        for (let i = 0; i < 8; i++) {
+            var s = document.getElementById('s' + i), m = document.getElementById('m' + i);
+            s.onmouseup = function() {
+                send_gain(i, this.value);
+            }
+            m.onclick = function() {
+                toggle_button(i);
+            }
+        }
+
+
+        setInterval(async function()
+        {
+            for (let i = 0; i < 8; i++)
+            {
+                let volumes = await get_volumes(i);
+                apply_volume(i, volumes.l, volumes.r);
+            }
+        }, 5000);
+
+
+        function toggle_button(s_id)
+        {
+            if (document.getElementById('m' + s_id).style.background == red)
+            {
+                set_button_color(s_id, gray);
+                send_mute(s_id, "False");
+            }
+            else
+            {
+                set_button_color(s_id, red);
+                send_mute(s_id, "True");
+            }
+        }
+
+        function set_button_color(s_id, color)
+        {
+            document.getElementById('m' + s_id).style.background = color;
+        }
+
+        function apply_volume(s_id, r, l)
+        {
+
+        }
+
+
+        function send_mute(s_id, value)
+        {
+            fetch(`/mute_strip?s=${s_id}&v=${value}`, {method: 'post'});
+        };
+
+        function send_gain(s_id, value)
+        {
+          fetch(`/set_gain?s=${s_id}&v=${value}`, {method: 'post'});
+        };
+
+        async function get_volumes(s_id)
+        {
+            const rsp =  await fetch(`/volume?s=${s_id}`, {method: 'get'});
+            return rsp.json();
+        }
+    </script>
+    <style>
+        .slider[orient=vertical] {
+          width: 15px;
+          height: 175px;
+          padding: 0 5px;
+          border-radius: 5px;
+          background: #d3d3d3;
+          outline: none;
+          opacity: 0.7;
+          -webkit-transition: .2s;
+          transition: opacity .2s;
+        }
+
+        .slider:hover {
+          opacity: 1;
+        }
+
+        .slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 25px;
+          height: 25px;
+          border-radius: 50%;
+          background: #04AA6D;
+          cursor: pointer;
+        }
+
+        .slider::-moz-range-thumb {
+          width: 25px;
+          height: 25px;
+          border-radius: 50%;
+          background: #04AA6D;
+          cursor: pointer;
+        }
+
+
+        .button {
+          background-color: gray;
+          border: none;
+          color: white;
+          padding: 10px;
+          text-align: center;
+          font-size: 14px;
+          margin: 4px 2px;
+        }
+
+
+        div.margin {margin-bottom: 10px;}
+
+        .grid-container {
+          display: grid;
+          grid-template-columns: 65px 65px 65px 65px 65px 65px 65px 65px;
+          grid-template-rows: auto auto;
+          padding: 20px;
+          gap: 10px;
+        }
+        .grid-item {
+          background-color: rgba(255, 255, 255, 0.2);
+          text-align: center;
+        }
+    </style>
+</html>
