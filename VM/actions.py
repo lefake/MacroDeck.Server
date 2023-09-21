@@ -36,6 +36,9 @@ class BaseActions:
     def set_strip_mute(self, id, value):
         self._vm.strip[id].mute = value
 
+    def toggle_strip_mute(self, id):
+        self._vm.strip[id].mute = not self._vm.strip[id].mute
+
     def set_bus_gain(self, id, value):
         self._vm.bus[id].gain = value
 
@@ -75,6 +78,9 @@ class BaseActions:
     def get_strip_level(self, id):
         return self._vm.strip[id].levels.postfader
     # TODO : Add levels if needed
+
+    def is_strip_muted(self, id):
+        return int(self._vm.strip[id].mute)
 
     # Browser functions
 

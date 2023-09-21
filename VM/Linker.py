@@ -15,6 +15,8 @@ class Linker:
                      self._macros.osu_off,
                      self._macros.osu_off]
 
+        # TODO : Get all toggle value loaded once
+
     def get_gain(self, strip_id):
         return self._actions.get_strip_level(strip_id)
 
@@ -26,6 +28,12 @@ class Linker:
 
     def mute_strip(self, strip_id: int, value: bool):
         self._actions.set_strip_mute(strip_id, value)
+
+    def toggle_mute_strip(self, strip_id: int):
+        self._actions.toggle_strip_mute(strip_id)
+
+    def is_strip_muted(self, strip_id: int) -> bool:
+        return self._actions.is_strip_muted(strip_id)
 
     def gain_cb(self, input):
         parsed = input.decode()[1:-1].split(";")[:-1]
