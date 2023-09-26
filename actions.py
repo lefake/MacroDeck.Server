@@ -1,16 +1,7 @@
 import webbrowser
 from subprocess import Popen
 
-# VM constants
-MIC_ID = 0
-MUSIC_ID = 1
-DISCORD_ID = 2
-FIREFOX_ID = 3
-GAMES_ID = 5
-GENERAL_ID = 7
-
-class BaseActions:
-    app_dict = {
+app_dict = {
         "KeePassXC": "C:\\Program Files\\KeePassXC\\KeePassXC.exe",
         "Firefox": "C:\\Program Files\\Mozilla Firefox\\firefox.exe",
         "Discord": "C:\\Users\\lefake\\AppData\\Local\\Discord\\Update.exe --processStart Discord.exe",
@@ -25,95 +16,100 @@ class BaseActions:
         "DockerDesktop": "C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe",
     }
 
+class VMActions:
     def __init__(self, vm):
-        self._vm = vm
-
-    # VM functions
-
+        self.vm = vm
     def set_strip_gain(self, id, value: float):
-        self._vm.strip[id].gain = value
+        self.vm.strip[id].gain = value
 
     def set_strip_mute(self, id, value):
-        self._vm.strip[id].mute = value
+        self.vm.strip[id].mute = value
 
     def toggle_strip_mute(self, id):
-        self._vm.strip[id].mute = not self._vm.strip[id].mute
+        self.vm.strip[id].mute = not self.vm.strip[id].mute
 
     def set_bus_gain(self, id, value):
-        self._vm.bus[id].gain = value
+        self.vm.bus[id].gain = value
 
     def set_bus_mute(self, id, value):
-        self._vm.bus[id].mute = value
+        self.vm.bus[id].mute = value
 
     def set_app_gain(self, id, name, value):
-        self._vm.strip[id].appgain(name, value)
+        self.vm.strip[id].appgain(name, value)
 
     def set_app_mute(self, id, name, value):
-        self._vm.strip[id].appmute(name, value)
+        self.vm.strip[id].appmute(name, value)
 
     def set_a1(self, id, value):
-        self._vm.strip[id].A1 = value
+        self.vm.strip[id].A1 = value
 
     def set_a2(self, id, value):
-        self._vm.strip[id].A2 = value
+        self.vm.strip[id].A2 = value
 
     def set_a3(self, id, value):
-        self._vm.strip[id].A3 = value
+        self.vm.strip[id].A3 = value
 
     def set_a4(self, id, value):
-        self._vm.strip[id].A4 = value
+        self.vm.strip[id].A4 = value
 
     def set_a5(self, id, value):
-        self._vm.strip[id].A5 = value
+        self.vm.strip[id].A5 = value
 
     def set_b1(self, id, value):
-        self._vm.strip[id].B1 = value
+        self.vm.strip[id].B1 = value
 
     def set_b2(self, id, value):
-        self._vm.strip[id].B2 = value
+        self.vm.strip[id].B2 = value
 
     def set_b3(self, id, value):
-        self._vm.strip[id].B3 = value
+        self.vm.strip[id].B3 = value
 
     def get_strip_level(self, id):
-        return self._vm.strip[id].levels.postfader
+        return self.vm.strip[id].levels.postfader
     # TODO : Add levels if needed
 
+    def get_strip_gain(self, id):
+        return self.vm.strip[id].gain
     def is_strip_muted(self, id):
-        return int(self._vm.strip[id].mute)
+        return int(self.vm.strip[id].mute)
 
-    # Browser functions
+    def get_a1(self, id):
+        return self.vm.strip[id].A1
 
-    def open_new(self, url):
+    def get_a2(self, id):
+        return self.vm.strip[id].A2
+
+    def get_a3(self, id):
+        return self.vm.strip[id].A3
+
+    def get_a4(self, id):
+        return self.vm.strip[id].A4
+
+    def get_a5(self, id):
+        return self.vm.strip[id].A5
+
+    def get_b1(self, id):
+        return self.vm.strip[id].B1
+
+    def get_b2(self, id):
+        return self.vm.strip[id].B2
+
+    def get_b3(self, id):
+        return self.vm.strip[id].B3
+
+class WindowsActions:
+    def __init__(self):
+        self.processes = {}
+    @staticmethod
+    def open_new(url):
         webbrowser.open_new(url)
 
-    def open_new_tab(self, url):
+    @staticmethod
+    def open_new_tab(url):
         webbrowser.open_new_tab(url)
 
-    # App functions
-
     def open_app(self, name):
-        Popen([self.app_dict[name]])
+        self.processes[name] = Popen([app_dict[name]])
 
-class Macros:
-    def __init__(self, base_action):
-        self._base_actions = base_action
-
-    def apply_all_gains(self, values):
-        for i, v in enumerate(values):
-            self._base_actions.set_strip_gain(i, int(v))
-
-    def osu_on(self):
-        self._base_actions.open_app("Osu")
-        self._base_actions.set_strip_mute(1, True)
-        self._base_actions.set_strip_mute(5, False)
-        self._base_actions.set_strip_gain(5, -4.0)
-        self._base_actions.set_b2(5, True)
-
-    def osu_off(self):
-        self._base_actions.set_strip_mute(1, False)
-        self._base_actions.set_strip_mute(5, True)
-        self._base_actions.set_b2(5, False)
-
-    def open_twitch(self, streamer=""):
-        self._base_actions.open_new_tab("www.twitch.tv/" + streamer)
+    def close_app(self, name):
+        self.processes[name].terminate()

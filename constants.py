@@ -1,0 +1,11 @@
+MIC_ID = 0
+MUSIC_ID = 1
+DISCORD_ID = 2
+FIREFOX_ID = 3
+GAMES_ID = 5
+GENERAL_ID = 7
+
+MAP_HW_VM = [0, 1, 2, 4, 5]
+MAP_HW_MACRO = [0, 1, 2, 3, 4, 5, 6, 7]
+
+MOTORIZED = False

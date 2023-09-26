@@ -2,45 +2,21 @@ import voicemeeterlib
 from flask import Flask, request, make_response
 from flask_api import status
 
+from macroHandler import MacroHandler
+from actions import VMActions, WindowsActions
+from constants import *
+
 BAD_ARGS = ("Record not found", status.HTTP_400_BAD_REQUEST)
 
 app = Flask(__name__, static_folder='.')
-vm = None
+vmActions = None
+macro = None
 
-MOTORIZED = False
-
-MAP_HW_VM = [0, 1, 2, 4, 5]
-MAP_HW_MACRO = [0, 1, 2, 3, 4, 5, 6, 7]
 
 def valid_response(content):
     res = make_response(str(content), status.HTTP_200_OK)
     res.mimetype = "text/plain"
     return res
-
-@app.route('/push_strip', methods=['POST'])
-def push_strip():
-    args = request.args
-
-    if 's' in args.keys():
-        if 'g' in args.keys():
-            vm.strip[int(args.get('s'))].gain = float(args.get('g'))
-
-        if 'm' in args.keys():
-            vm.strip[int(args.get('s'))].mute = not vm.strip[int(args.get('s'))].mute
-
-        if 'g' in args.keys() or 'm' in args.keys():
-            return valid_response("OK")
-        else:
-            return BAD_ARGS
-    else:
-        return BAD_ARGS
-
-@app.route('/pull_strip', methods=['GET'])
-def pull_strip():
-    args = request.args
-
-    if 's' in args.keys():
-        return valid_response(vm.strip[int(args.get('s'))].mute)
 
 @app.route('/pull', methods=['GET'])
 def pull():
@@ -52,8 +28,8 @@ def pull():
 
     for vId in MAP_HW_VM:
         if MOTORIZED:
-            gain += str(vm.strip[vId].gain) + ','
-        mute += '1' if vm.strip[vId].mute else '0'
+            gain += str(vmActions.get_strip_gain(vId)) + ','
+        mute += '1' if vmActions.is_strip_muted(vId) else '0'
 
     return valid_response(gain + str(int(mute[::-1], 2)))
 
@@ -69,7 +45,7 @@ def push():
 
         for pair in gains:
             vId, g = pair.split(':')
-            vm.strip[MAP_HW_VM[int(vId)]].gain = float(g)
+            vmActions.set_strip_gain(MAP_HW_VM[int(vId)], float(g))
 
     if 'm' in args.keys():
         mute = int(args.get('m'))
@@ -80,7 +56,7 @@ def push():
 
         for i, vId in enumerate(MAP_HW_VM):
             if bins[i] == "1":
-                vm.strip[vId].mute = not vm.strip[vId].mute
+                vmActions.toggle_strip_mute(vId)
 
     return valid_response("")
 
@@ -101,11 +77,13 @@ def pushMacro():
 
         for i, mId in enumerate(MAP_HW_MACRO):
             if bins[i] == "1":
-                print(f"Macro {mId} toggled")
+                macro.toggle_macro(mId)
 
     return valid_response("")
 
 if __name__ == "__main__":
-    with voicemeeterlib.api("potato") as VM:
-        vm = VM
+    with voicemeeterlib.api("potato") as vm:
+        vmActions = VMActions(vm)
+        wActions = WindowsActions()
+        macro = MacroHandler(vmActions, wActions)
         app.run(host='192.168.2.13', port=5000)
