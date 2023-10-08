@@ -17,8 +17,9 @@ class MacroHandler:
                        self.macro6]
 
     def toggle_macro(self, mId):
-        self.macros[mId](not self.macro_states[mId])
-        self.macro_states[mId] = not self.macro_states[mId]
+        print(f"Macro {mId} toggled")
+        # self.macros[mId](not self.macro_states[mId])
+        # self.macro_states[mId] = not self.macro_states[mId]
 
     def macro0(self, state):
         if state:
