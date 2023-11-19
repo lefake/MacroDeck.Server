@@ -1,89 +1,84 @@
+import threading
+import time
+
 import voicemeeterlib
-from flask import Flask, request, make_response
-from flask_api import status
 
-from macroHandler import MacroHandler
 from actions import VMActions, WindowsActions
-from constants import *
+from constants import MAP_HW_VM, MAP_HW_MACRO
+from macroHandler import MacroHandler
+from MQTTServer import MQTTServer
 
-BAD_ARGS = ("Record not found", status.HTTP_400_BAD_REQUEST)
+running = True
 
-app = Flask(__name__, static_folder='.')
-vmActions = None
-macro = None
+def str_to_bin(msg: str, l: int) -> str:
+    mute = int(msg)
+    return f'{mute:0{l}b}'[::-1]
 
+def gains_cb(msg: str):
+    print(f"gains {msg}")
+    parts = msg.split(':')
+    vmActions.set_strip_gain(MAP_HW_VM[int(parts[0])], float(parts[1]))
 
-def valid_response(content):
-    res = make_response(str(content), status.HTTP_200_OK)
-    res.mimetype = "text/plain"
-    return res
+def mutes_cb(msg: str):
+    print(f"mutes {msg}")
+    bins = str_to_bin(msg, len(MAP_HW_VM))
 
-@app.route('/pull', methods=['GET'])
-def pull():
-    if any(request.args.keys()):
-        return BAD_ARGS
+    for i, vId in enumerate(MAP_HW_VM):
+        if bins[i] == "1":
+            vmActions.toggle_strip_mute(vId)
 
-    mute = ""
-    gain = ""
+def macros_cb(msg: str):
+    print(f"macros {msg}")
+    bins = str_to_bin(msg, len(MAP_HW_MACRO))
 
-    for vId in MAP_HW_VM:
-        if MOTORIZED:
-            gain += str(vmActions.get_strip_gain(vId)) + ','
-        mute += '1' if vmActions.is_strip_muted(vId) else '0'
+    for i, mId in enumerate(MAP_HW_MACRO):
+        if bins[i] == "1":
+            macro.toggle_macro(mId)
 
-    return valid_response(gain + str(int(mute[::-1], 2)))
+def push_vm_state(vm, pub_cb):
+    current_mutes = []
+    mute_dirty = False
+    last_update = time.time() * 1000
 
-@app.route('/push', methods=['POST'])
-def push():
-    args = request.args
+    for i, s in enumerate(MAP_HW_VM):
+        current_mutes.append(vm.strip[s].mute)
 
-    if 'g' in args.keys():
-        gains = args.get('g')[:-1].split(',')
+    while running:
+        if vm.pdirty:
+            mutes = []
+            for i, s in enumerate(MAP_HW_VM):
+                mutes.append(vm.strip[s].mute)
 
-        if len(gains) > len(MAP_HW_VM):
-            return BAD_ARGS
+            if mutes != current_mutes:
+                current_mutes = mutes
+                mute_dirty = True
 
-        for pair in gains:
-            vId, g = pair.split(':')
-            vmActions.set_strip_gain(MAP_HW_VM[int(vId)], float(g))
-
-    if 'm' in args.keys():
-        mute = int(args.get('m'))
-        bins = f'{mute:0{len(MAP_HW_VM)}b}'[::-1]
-
-        if len(bins) != len(MAP_HW_VM):
-            return BAD_ARGS
-
-        for i, vId in enumerate(MAP_HW_VM):
-            if bins[i] == "1":
-                vmActions.toggle_strip_mute(vId)
-
-    return valid_response("")
-
-@app.route('/pullMacro', methods=['GET'])
-def pullMacro():
-    return valid_response("")
-
-@app.route('/pushMacro', methods=['POST'])
-def pushMacro():
-    args = request.args
-
-    if 'm' in args.keys():
-        macros = int(args.get('m'))
-        bins = f'{macros:0{len(MAP_HW_MACRO)}b}'[::-1]
-
-        if len(bins) != len(MAP_HW_MACRO):
-            return BAD_ARGS
-
-        for i, mId in enumerate(MAP_HW_MACRO):
-            if bins[i] == "1":
-                macro.toggle_macro(mId)
-
-    return valid_response("")
+            now = time.time() * 1000
+            if mute_dirty and now - last_update >= 100:
+                mute = ''.join(['1' if x else '0' for x in current_mutes])
+                pub_cb("macrodeck/vm", str(int(mute[::-1], 2)))
+                mute_dirty = False
 
 if __name__ == "__main__":
+    subs = {"macrodeck/gains": gains_cb,
+              "macrodeck/mutes": mutes_cb,
+              "macrodeck/macros": macros_cb}
+
     with voicemeeterlib.api("potato") as vm:
         vmActions = VMActions(vm)
         wActions = WindowsActions()
         macro = MacroHandler(vmActions, wActions)
-        app.run(host='192.168.2.13', port=5000)
+
+        mqtt = MQTTServer("192.168.2.128", subs)
+        mqtt.start()
+
+        t = threading.Thread(target=push_vm_state, args=(vm, mqtt.publish))
+        t.start()
+
+        try:
+            while True:
+                pass
+        except KeyboardInterrupt:
+            mqtt.stop()
+            running = False
+            t.join(timeout=1)

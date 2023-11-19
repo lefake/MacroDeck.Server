@@ -9,3 +9,5 @@ MAP_HW_VM = [5, 4, 3, 2, 1]
 MAP_HW_MACRO = [0, 1, 2, 3, 4, 5, 6, 7]
 
 MOTORIZED = False
+
+MQTT_IP = "192.168.2.128"
