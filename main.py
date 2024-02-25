@@ -15,12 +15,10 @@ def str_to_bin(msg: str, l: int) -> str:
     return f'{mute:0{l}b}'[::-1]
 
 def gains_cb(msg: str):
-    print(f"gains {msg}")
     parts = msg.split(':')
     vmActions.set_strip_gain(MAP_HW_VM[int(parts[0])], float(parts[1]))
 
 def mutes_cb(msg: str):
-    print(f"mutes {msg}")
     bins = str_to_bin(msg, len(MAP_HW_VM))
 
     for i, vId in enumerate(MAP_HW_VM):
@@ -28,7 +26,6 @@ def mutes_cb(msg: str):
             vmActions.toggle_strip_mute(vId)
 
 def macros_cb(msg: str):
-    print(f"macros {msg}")
     bins = str_to_bin(msg, len(MAP_HW_MACRO))
 
     for i, mId in enumerate(MAP_HW_MACRO):
@@ -37,27 +34,23 @@ def macros_cb(msg: str):
 
 def push_vm_state(vm, pub_cb):
     current_mutes = []
-    mute_dirty = False
-    last_update = time.time() * 1000
-
     for i, s in enumerate(MAP_HW_VM):
         current_mutes.append(vm.strip[s].mute)
 
+    vm.clear_dirty()
+
     while running:
-        if vm.pdirty:
-            mutes = []
-            for i, s in enumerate(MAP_HW_VM):
-                mutes.append(vm.strip[s].mute)
+        mutes = []
+        for i, s in enumerate(MAP_HW_VM):
+            mutes.append(vm.strip[s].mute)
 
-            if mutes != current_mutes:
-                current_mutes = mutes
-                mute_dirty = True
+        if mutes != current_mutes:
+            current_mutes = mutes
+            mute = ''.join(['1' if x else '0' for x in current_mutes])
+            pub_cb("macrodeck/vm", str(int(mute[::-1], 2)))
+            vm.clear_dirty()
 
-            now = time.time() * 1000
-            if mute_dirty and now - last_update >= 100:
-                mute = ''.join(['1' if x else '0' for x in current_mutes])
-                pub_cb("macrodeck/vm", str(int(mute[::-1], 2)))
-                mute_dirty = False
+        time.sleep(0.1)
 
 if __name__ == "__main__":
     subs = {"macrodeck/gains": gains_cb,
@@ -77,7 +70,8 @@ if __name__ == "__main__":
 
         try:
             while True:
-                pass
+                mqtt.publish("macrodeck/hb", str(1))
+                time.sleep(1)
         except KeyboardInterrupt:
             mqtt.stop()
             running = False

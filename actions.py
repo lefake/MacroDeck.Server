@@ -4,21 +4,26 @@ from subprocess import Popen
 app_dict = {
         "KeePassXC": "C:\\Program Files\\KeePassXC\\KeePassXC.exe",
         "Firefox": "C:\\Program Files\\Mozilla Firefox\\firefox.exe",
-        "Discord": "C:\\Users\\lefake\\AppData\\Local\\Discord\\Update.exe --processStart Discord.exe",
+        "Discord": "C:\\Users\\lefake\\AppData\\Local\\Discord\\app-1.0.9031\\Discord.exe",
         "Sonixd": "C:\\Users\\lefake\\AppData\\Local\\Programs\\Sonixd\\Sonixd.exe",
         "MobaXterm": "C:\\Program Files (x86)\\Mobatek\\MobaXterm\\MobaXterm.exe",
         "WaveForms": "C:\\Program Files (x86)\\Digilent\\WaveForms3\\WaveForms.exe",
         "Arduino": "C:\\Users\\lefake\\AppData\\Local\\Programs\\Arduino IDE\\Arduino IDE.exe",
         "Osu": "C:\\Users\\lefake\\AppData\\Local\\osu!\\osu!.exe",
         "IntelliJ": "C:\\Program Files\\JetBrains\\IntelliJ IDEA Community Edition 2022.2.1\\bin\\idea64.exe",
-        "PyCharm": "C:\\Program Files\\JetBrains\\PyCharm Community Edition 2022.2.1\\bin\\pycharm64.exe",
-        "Clion": "C:\\Program Files\\JetBrains\\CLion 2022.2.4\\bin\\clion64.exe",
+        "PyCharm": "C:\\Program Files\\JetBrains\\PyCharm Community Edition 2023.2.3\\bin\\pycharm64.exe",
+        "Clion": "C:\\Program Files\\JetBrains\\CLion 2023.3\\bin\\clion64.exe",
         "DockerDesktop": "C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe",
+        "VSCode": "C:\\Users\\lefake\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"
     }
 
 class VMActions:
     def __init__(self, vm):
         self.vm = vm
+
+    def restart_engine(self):
+        self.vm.command.restart()
+
     def set_strip_gain(self, id, value: float):
         self.vm.strip[id].gain = value
 
@@ -109,7 +114,17 @@ class WindowsActions:
         webbrowser.open_new_tab(url)
 
     def open_app(self, name):
-        self.processes[name] = Popen([app_dict[name]])
+        try:
+            self.processes[name] = Popen([app_dict[name]])
+        except FileNotFoundError as e:
+            print(f"Can't open {name} : {e}")
+        except KeyError:
+            print(f"Can't find {name} in dictionary")
 
     def close_app(self, name):
-        self.processes[name].terminate()
+        try:
+            self.processes[name].terminate()
+        except FileNotFoundError as e:
+            print(f"Can't close {name} : {e}")
+        except KeyError:
+            print(f"Can't find {name} in dictionary")
