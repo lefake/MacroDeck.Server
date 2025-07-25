@@ -33,7 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (mqtt_sender, mqtt_receiver) = channel::<MqttMsg>(32);
     let mqtt = MqttClient::start(
         "mqtt.subcorp",
-        "test", 
+        "MacroDeck.Server", 
         1883,
         mqtt_sender);
 
