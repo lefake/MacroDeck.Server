@@ -6,6 +6,8 @@ use std::collections::HashMap;
 use tokio::{time::{Duration, interval}};
 use tokio::sync::mpsc::{channel, Receiver, error::SendError};
 
+use mpris::{PlayerFinder, PlaybackStatus};
+
 use pactl::{PactlManager, ProcessData, AppName};
 use mqtt::{MqttClient, MqttMsg};
 
@@ -13,6 +15,7 @@ use crate::mapper::MqttPactl;
 
 const MUTES_TOPIC: &str = "macrodeck/mutes";
 const GAINS_TOPIC: &str = "macrodeck/gains";
+const MACROS_TOPIC: &str = "macrodeck/macros";
 const HB_TOPIC: &str = "macrodeck/hb";
 const CONTROL_TOPIC: &str = "macrodeck/vm";
 
@@ -39,6 +42,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     mqtt.sub(MUTES_TOPIC).await?;
     mqtt.sub(GAINS_TOPIC).await?;
+    mqtt.sub(MACROS_TOPIC).await?;
 
     let (pactl_sender, pactl_receiver) = channel::<ProcessData>(32);
     let pactl = PactlManager::new(pactl_sender);
@@ -175,6 +179,33 @@ async fn mqtt_parser(input: MqttMsg, connectors: &MqttPactl, pactl: &PactlManage
             pactl.set_app_volume(a, remap_gain(gain)).await;
         }
     }
+    else if input.topic.eq(MACROS_TOPIC) {
+        let macros = input.payload.parse::<u8>()
+            .map_err(|_| "Message must be a u8")?;
+
+        let activated = unpack_macros(macros, 6);
+
+        if activated[0] {
+            let finder = PlayerFinder::new().map_err(|_| "Error in player finder")?;
+            match finder.find_by_name("Mozilla firefox") {
+                Ok(player) => player.next().map_err(|err| {
+                    println!("{:?}", err);
+                    "Unable to go next"
+                })?,
+                Err(err) => println!("Couldn't find the firefox stuff: {err}"),
+            }
+        }
+        else if activated[1] {
+            let finder = PlayerFinder::new().map_err(|_| "Error in player finder")?;
+            match finder.find_by_name("Mozilla firefox") {
+                Ok(player) => player.previous().map_err(|err| {
+                    println!("{:?}", err);
+                    "Unable to go back"
+                })?,
+                Err(err) => println!("Couldn't find the firefox stuff: {err}"),
+            }
+        }
+    }
     else {
         return Err("Unknown topic received")
     }
@@ -200,8 +231,14 @@ fn gain_parser(payload: String) -> Result<(u8, f64), &'static str> {
 
 fn remap_gain(value: f64) -> f64 {
     let (from_min, from_max) = (0., 100.);
-    let (to_min, to_max) = (150., 0.);
+    let (to_min, to_max) = (0., 150.);
 
     let normalized = (value - from_min) / (from_max - from_min);
     to_min + normalized * (to_max - to_min)
+}
+
+fn unpack_macros(macros: u8, n: usize) -> Vec<bool> {
+    (0..n)
+        .map(|i| ((macros >> i) & 1) != 0)
+        .collect()
 }
